@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Círculo Trigonométrico Interactivo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        canvas {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            cursor: crosshair;
+        }
+        .tooltip-custom {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
+            font-size: 14px;
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="mb-4 text-center">Simulador del Círculo Trigonométrico</h2>
+    
+    <div class="row">
+        <div class="col-lg-6 d-flex justify-content-center position-relative mb-4">
+            <canvas id="trigCanvas" width="500" height="500"></canvas>
+            <div id="hoverTooltip" class="tooltip-custom"></div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Controles</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 fw-bold">Ángulos Notables (Primer Cuadrante):</p>
+                    <div class="btn-group w-100 mb-4" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="setAngle(0)">0</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setAngle(Math.PI/6)">π/6</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setAngle(Math.PI/4)">π/4</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setAngle(Math.PI/3)">π/3</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setAngle(Math.PI/2)">π/2</button>
+                    </div>
+
+                    <p class="mb-2 fw-bold">Reducción al Primer Cuadrante:</p>
+                    <form class="input-group mb-3" onsubmit="applyInputAngle()">
+                        <span class="input-group-text">Ángulo (Rad)</span>
+                        <input type="text" id="angleInput" class="form-control" placeholder="Ej: 3.14 o PI">
+                        <input  type="submit" class="btn btn-success"  value="Graficar">
+                    </form>
+                    <small class="text-muted d-block mb-2">Puedes escribir números decimales o la palabra "PI" (ej: PI/2, 2.5).</small>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Tabla de Ángulos Notables</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Grados</th>
+                                <th>Radianes</th>
+                                <th>Seno (y)</th>
+                                <th>Coseno (x)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>0°</td><td>0</td><td>0</td><td>1</td></tr>
+                            <tr><td>30°</td><td>π/6</td><td>1/2</td><td>√3/2</td></tr>
+                            <tr><td>45°</td><td>π/4</td><td>√2/2</td><td>√2/2</td></tr>
+                            <tr><td>60°</td><td>π/3</td><td>√3/2</td><td>1/2</td></tr>
+                            <tr><td>90°</td><td>π/2</td><td>1</td><td>0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('trigCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('hoverTooltip');
+
+    // Configuraciones del gráfico
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const R = 200; // Radio del círculo en píxeles
+
+    // Estados
+    let currentAngleRaw = Math.PI / 4; // Ángulo ingresado (puede ser > pi/2)
+    let currentAngleReduced = Math.PI / 4; // Ángulo reducido al 1er cuadrante
+    let mouseX = 0;
+    let mouseY = 0;
+
+    // Inicializar
+    setAngle(Math.PI / 4);
+
+    // Eventos de Mouse para el Hover
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+        draw(); // Redibujar para calcular hovers
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+        draw();
+    });
+
+    // Función principal de dibujo
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Dibujar Ejes
+        ctx.beginPath();
+        ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); // Eje X
+        ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); // Eje Y
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+
+        // Dibujar Círculo
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#aaaaaa';
+        ctx.stroke();
+
+        // Dibujar el ángulo original (si no es el mismo que el reducido)
+        if (Math.abs(currentAngleRaw - currentAngleReduced) > 0.01) {
+            drawTriangle(currentAngleRaw, 'rgba(150, 150, 150, 0.4)', false);
+        }
+
+        // Dibujar el ángulo reducido en el 1er cuadrante
+        drawTriangle(currentAngleReduced, '#0d6efd', true);
+    }
+
+    function drawTriangle(angle, color, isInteractive) {
+        // Coordenadas del punto en la circunferencia
+        const px = cx + R * Math.cos(angle);
+        const py = cy - R * Math.sin(angle); // Restamos porque el eje Y en canvas crece hacia abajo
+
+        // Dibujar Radio (Hipotenusa)
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(px, py);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isInteractive ? 2 : 1;
+        ctx.stroke();
+
+        // Dibujar Catetos solo si es el interactivo (Reducido)
+        if (isInteractive) {
+            const cosVal = Math.cos(angle);
+            const sinVal = Math.sin(angle);
+            const deg = (angle * 180 / Math.PI).toFixed(1);
+
+            let hoverSeno = false;
+            let hoverCoseno = false;
+
+            // Detección simple de hover basada en la posición de las líneas
+            // Línea Coseno (Horizontal)
+            if (Math.abs(mouseY - cy) < 10 && ((mouseX > cx && mouseX < px) || (mouseX < cx && mouseX > px))) {
+                hoverCoseno = true;
+            }
+            // Línea Seno (Vertical)
+            if (Math.abs(mouseX - px) < 10 && ((mouseY > py && mouseY < cy) || (mouseY < py && mouseY > cy))) {
+                hoverSeno = true;
+            }
+
+            // Dibujar Cateto Adyacente (Coseno) - Rojo
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(px, cy);
+            ctx.strokeStyle = hoverCoseno ? '#ff0000' : '#dc3545';
+            ctx.lineWidth = hoverCoseno ? 5 : 3;
+            ctx.stroke();
+
+            // Dibujar Cateto Opuesto (Seno) - Verde
+            ctx.beginPath();
+            ctx.moveTo(px, cy);
+            ctx.lineTo(px, py);
+            ctx.strokeStyle = hoverSeno ? '#00cc00' : '#198754';
+            ctx.lineWidth = hoverSeno ? 5 : 3;
+            ctx.stroke();
+
+            // Mostrar Tooltip si hay hover
+            if (hoverCoseno || hoverSeno) {
+                tooltip.style.display = 'block';
+                const canvasRect = canvas.getBoundingClientRect();
+                tooltip.style.left = (canvasRect.left + mouseX + window.scrollX) + 'px';
+                tooltip.style.top = (canvasRect.top + mouseY + window.scrollY) + 'px';
+
+                if (hoverSeno) {
+                    tooltip.innerHTML = `<strong>Seno</strong><br>Ángulo: ${deg}°<br>Valor: ${sinVal.toFixed(3)}`;
+                } else if (hoverCoseno) {
+                    tooltip.innerHTML = `<strong>Coseno</strong><br>Ángulo: ${deg}°<br>Valor: ${cosVal.toFixed(3)}`;
+                }
+            } else {
+                tooltip.style.display = 'none';
+            }
+        } else {
+            // Dibujar catetos fantasma para el ángulo original
+            ctx.beginPath();
+            ctx.moveTo(cx, cy); ctx.lineTo(px, cy); ctx.lineTo(px, py);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+        }
+    }
+
+    // Funciones de Lógica
+    function setAngle(rad) {
+        currentAngleRaw = rad;
+        currentAngleReduced = reduceToFirstQuadrant(rad);
+        draw();
+    }
+
+    function applyInputAngle(){
+        event.preventDefault();
+        let val = document.getElementById('angleInput').value.trim().toUpperCase();
+        // Permitir que el usuario escriba 'PI'
+        val = val.replace(/PI/g, 'Math.PI');
+        
+        try {
+            // Evaluamos la expresión de forma segura (para soportar 3*PI/4 etc)
+            let rad = Function('"use strict";return (' + val + ')')();
+            if (!isNaN(rad)) {
+                setAngle(rad);
+            } else {
+                alert("Por favor ingresa un número válido o una expresión con PI.");
+            }
+        } catch (e) {
+            alert("Formato inválido. Usa números o 'PI', ej: PI/2 o 1.57");
+        }
+    }
+
+    function reduceToFirstQuadrant(rad) {
+        // Llevar el ángulo a la primera vuelta positiva (0 a 2PI)
+        let normalized = rad % (2 * Math.PI);
+        if (normalized < 0) {
+            normalized += 2 * Math.PI;
+        }
+
+        // Reducir al primer cuadrante (0 a PI/2)
+        if (normalized >= 0 && normalized <= Math.PI / 2) {
+            return normalized; // Cuadrante I
+        } else if (normalized > Math.PI / 2 && normalized <= Math.PI) {
+            return Math.PI - normalized; // Cuadrante II
+        } else if (normalized > Math.PI && normalized <= 1.5 * Math.PI) {
+            return normalized - Math.PI; // Cuadrante III
+        } else {
+            return 2 * Math.PI - normalized; // Cuadrante IV
+        }
+    }
+</script>
+
+</body>
+</html>
