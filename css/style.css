@@ -1,0 +1,76 @@
+/* =========================================
+   REDUCCIÓN DEL TAMAÑO GLOBAL (10% aprox)
+   ========================================= */
+body { 
+    background-color: #f8f9fa; 
+    padding-top: 15px; 
+    padding-bottom: 30px;
+    font-size: 0.9rem; /* Fuente base reducida */
+}
+
+h2 { font-size: 1.6rem; }
+h5 { font-size: 1.05rem; }
+
+/* Control del contenedor del gráfico en PC */
+canvas {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+}
+
+#infoPanel {
+    max-width: 400px;
+    font-size: 0.9rem; 
+}
+
+/* =========================================
+   COMPACTACIÓN PARA CELULARES (Responsive)
+   ========================================= */
+@media (max-width: 768px) {
+    /* Achicamos el canvas en móviles para que no ocupe toda la pantalla */
+    canvas {
+        max-width: 280px;
+    }
+    /* El panel de info también se reduce para acompañar al canvas */
+    #infoPanel {
+        max-width: 320px;
+        font-size: 0.8rem;
+    }
+    /* Achicamos los márgenes (paddings) internos para ahorrar espacio vertical */
+    .p-3 {
+        padding: 0.75rem !important;
+    }
+    h6 {
+        font-size: 0.9rem;
+    }
+}
+
+/* =========================================
+   ESTILOS DE LA CALCULADORA
+   ========================================= */
+/* Ajustamos el alto mínimo del preview para que no salte la interfaz */
+.min-h-preview {
+    min-height: 35px;
+}
+
+#mathInput {
+    font-size: 1.25rem;
+    letter-spacing: 1px;
+}
+
+/* Botones numéricos y de operaciones */
+.calc-btn {
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.4rem 0.5rem;
+    transition: transform 0.1s;
+}
+
+.calc-btn:active {
+    transform: scale(0.95);
+}
+
+.math-tex {
+    display: inline-block;
+}
