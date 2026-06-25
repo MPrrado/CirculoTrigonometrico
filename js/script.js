@@ -1,13 +1,8 @@
-/**
- * =====================================================================
- * CONFIGURACIÓN INICIAL DEL ENTORNO
- * =====================================================================
- */
 const canvas = document.getElementById('trigCanvas');
 const ctx = canvas.getContext('2d');
 const infoPanel = document.getElementById('infoPanel');
 const mathInput = document.getElementById('mathInput');
-const latexPreview = document.getElementById('latexPreview');
+const latexRenderLayer = document.getElementById('latexRenderLayer');
 
 const cx = canvas.width / 2;
 const cy = canvas.height / 2;
@@ -19,67 +14,45 @@ let currentAngleReduced = Math.PI / 4;
 let currentDenominator = 4;
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Renderiza la tabla y las instrucciones
     document.querySelectorAll('.math-tex').forEach(el => {
         katex.render(el.innerText, el, { throwOnError: false });
     });
     
-    // Escuchar el input nativo (cuando escribes con el teclado del PC/Móvil)
-    mathInput.addEventListener('input', updatePreview);
+    mathInput.addEventListener('input', updateScreen);
     
-    updatePreview();
+    updateScreen();
     draw();
     updateInfoPanel();
 });
 
-
-/**
- * =====================================================================
- * SCROLL AUTOMÁTICO PARA MÓVILES
- * =====================================================================
- * Lleva la vista hacia el canvas de forma fluida si el ancho es menor a 992px
- */
 function scrollToVisualizer() {
     if (window.innerWidth < 992) {
         document.getElementById('visualizer-container').scrollIntoView({ 
             behavior: 'smooth', 
-            block: 'start' // Alinea el tope del canvas con el tope de la pantalla
+            block: 'start' 
         });
     }
 }
 
-
-/**
- * =====================================================================
- * LÓGICA DEL TECLADO DE LA CALCULADORA Y CURSOR
- * =====================================================================
- */
-
-/**
- * Inserta un valor exactamente donde está posicionado el cursor de texto.
- */
+// INSERCIÓN DE DATOS: Respeta la posición del cursor, incluso si está invisible
 function insertAtCursor(val) {
     const start = mathInput.selectionStart;
     const end = mathInput.selectionEnd;
     const text = mathInput.value;
     
-    // Inyecta el valor y actualiza el campo
     mathInput.value = text.substring(0, start) + val + text.substring(end);
-    
-    // Mueve el cursor justo después de lo que insertamos
     mathInput.selectionStart = mathInput.selectionEnd = start + val.length;
     mathInput.focus();
-    updatePreview();
+    updateScreen();
 }
 
-/**
- * Borra el caracter inmediatamente a la izquierda del cursor (como Backspace)
- */
 function deleteChar() {
     const start = mathInput.selectionStart;
-    if (start === 0) return; // Nada que borrar
+    if (start === 0) return; 
     const text = mathInput.value;
     
-    // Detectar si estamos borrando la palabra "pi" de golpe
+    // Borrado semántico de la palabra 'pi' completa
     if (start >= 2 && text.substring(start - 2, start).toLowerCase() === 'pi') {
         mathInput.value = text.substring(0, start - 2) + text.substring(start);
         mathInput.selectionStart = mathInput.selectionEnd = start - 2;
@@ -88,32 +61,22 @@ function deleteChar() {
         mathInput.selectionStart = mathInput.selectionEnd = start - 1;
     }
     mathInput.focus();
-    updatePreview();
+    updateScreen();
 }
 
-/**
- * Borra absolutamente toda la expresión de la calculadora
- */
 function clearAll() {
     mathInput.value = "";
     mathInput.focus();
-    updatePreview();
+    updateScreen();
 }
 
-/**
- * Función MEJORADA para parsear fracciones matemáticamente correctas.
- * Resuelve el problema: 5pi/6 - 3 ya no pone el "- 3" en el denominador.
- */
+// Generador LaTeX dinámico para la capa visual
 function toLaTeX(str) {
     if (!str) return "";
     let tex = str.replace(/\*/g, '\\cdot ');
     tex = tex.replace(/pi/gi, '\\pi');
 
-    // REGEX INTELIGENTE PARA FRACCIONES:
-    // Captura lo que está justo antes del '/' y justo después del '/', ignorando signos + o -
-    // $1 = Numerador (ej: 5\pi, o contenido entre paréntesis)
-    // $2 = Denominador (ej: 6)
-    // Usamos un bucle por si hay más de una fracción en la expresión (ej: pi/2 + pi/3)
+    // Construcción inteligente de fracciones (ej: 5\pi/6 queda sobre la línea, restas van por fuera)
     let fractionRegex = /([a-zA-Z0-9_.\\]+|\([^)]+\))\s*\/\s*([a-zA-Z0-9_.\\]+|\([^)]+\))/g;
     let previous;
     do {
@@ -124,21 +87,14 @@ function toLaTeX(str) {
     return tex;
 }
 
-function updatePreview() {
+function updateScreen() {
     const val = mathInput.value.trim();
     if (val === "") {
-        latexPreview.innerHTML = '';
+        latexRenderLayer.innerHTML = '';
     } else {
-        katex.render(toLaTeX(val), latexPreview, { throwOnError: false });
+        katex.render(toLaTeX(val), latexRenderLayer, { throwOnError: false });
     }
 }
-
-
-/**
- * =====================================================================
- * MOTOR DE EVALUACIÓN Y EVENTOS
- * =====================================================================
- */
 
 function setAngleFromButton(rad, expr, denominator) {
     mathInput.value = expr;
@@ -147,31 +103,28 @@ function setAngleFromButton(rad, expr, denominator) {
     currentDenominator = denominator;
     currentAngleReduced = reduceToFirstQuadrant(rad);
     
-    updatePreview();
+    updateScreen();
     draw();
     updateInfoPanel();
-    
-    // Al apretar "Ver" en la tabla, escrollea al gráfico automáticamente
     scrollToVisualizer();
 }
 
+// EVALUACIÓN MATEMÁTICA CON SIMPLIFICACIÓN IMPLÍCITA
 function applyCalc() {
     let rawExpr = mathInput.value.trim();
     if (rawExpr === "") return;
     
-    // Quitar espacios
     let cleanVal = rawExpr.replace(/\s+/g, ''); 
     
-    // Multiplicaciones implícitas y soporte de paréntesis
-    cleanVal = cleanVal.replace(/(\d)pi/gi, '$1*pi'); // 5pi -> 5*pi
-    cleanVal = cleanVal.replace(/pi(\d)/gi, 'pi*$1'); // pi5 -> pi*5
-    cleanVal = cleanVal.replace(/(\d)\(/g, '$1*(');   // 5(2) -> 5*(2)
-    cleanVal = cleanVal.replace(/\)(\d)/g, ')*$1');   // (2)5 -> (2)*5
-    cleanVal = cleanVal.replace(/\)\(/g, ')*(');      // (2)(3) -> (2)*(3)
+    // Multiplicaciones implícitas: "5pi" lo entiende como "5*pi" internamente
+    cleanVal = cleanVal.replace(/(\d)pi/gi, '$1*pi'); 
+    cleanVal = cleanVal.replace(/pi(\d)/gi, 'pi*$1'); 
+    cleanVal = cleanVal.replace(/(\d)\(/g, '$1*(');   
+    cleanVal = cleanVal.replace(/\)(\d)/g, ')*$1');   
+    cleanVal = cleanVal.replace(/\)\(/g, ')*(');      
     
     let evalVal = cleanVal.replace(/pi/gi, 'Math.PI');
     
-    // Intentar extraer el denominador de la primera fracción que aparezca
     let denominator = 1;
     let match = cleanVal.match(/\/(\d+)/);
     if (match) {
@@ -189,8 +142,6 @@ function applyCalc() {
             
             draw();
             updateInfoPanel();
-            
-            // Al apretar Graficar, escrollea al gráfico automáticamente
             scrollToVisualizer();
         } else {
             alert("Error: Expresión matemática incompleta.");
@@ -200,23 +151,16 @@ function applyCalc() {
     }
 }
 
-// Reducción al primer cuadrante
 function reduceToFirstQuadrant(rad) {
     let normalized = rad % (2 * Math.PI);
     if (normalized < 0) normalized += 2 * Math.PI;
 
-    if (normalized >= 0 && normalized <= Math.PI / 2) return normalized; // I
-    if (normalized > Math.PI / 2 && normalized <= Math.PI) return Math.PI - normalized; // II
-    if (normalized > Math.PI && normalized <= 1.5 * Math.PI) return normalized - Math.PI; // III
-    return 2 * Math.PI - normalized; // IV
+    if (normalized >= 0 && normalized <= Math.PI / 2) return normalized; 
+    if (normalized > Math.PI / 2 && normalized <= Math.PI) return Math.PI - normalized; 
+    if (normalized > Math.PI && normalized <= 1.5 * Math.PI) return normalized - Math.PI; 
+    return 2 * Math.PI - normalized; 
 }
 
-
-/**
- * =====================================================================
- * VALORES MATEMÁTICOS EXACTOS (Fracciones en lugar de decimales)
- * =====================================================================
- */
 function getExactValueLatex(val) {
     const epsilon = 0.0001; 
     
@@ -236,12 +180,6 @@ function getExactValueLatex(val) {
     return val.toFixed(4);
 }
 
-
-/**
- * =====================================================================
- * MOTOR GRÁFICO DEL CANVAS
- * =====================================================================
- */
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -324,12 +262,6 @@ function draw() {
     ctx.stroke();
 }
 
-
-/**
- * =====================================================================
- * ACTUALIZACIÓN DEL PANEL DE RESULTADOS
- * =====================================================================
- */
 function updateInfoPanel() {
     let senValRaw = Math.sin(currentAngleRaw);
     let cosValRaw = Math.cos(currentAngleRaw);
@@ -341,7 +273,6 @@ function updateInfoPanel() {
     let exactSenRed = getExactValueLatex(senValRed);
     let exactCosRed = getExactValueLatex(cosValRed);
     
-    // Obtenemos la versión renderizada de la entrada actual
     let texExpr = toLaTeX(currentCalcExpr);
 
     let html = `
@@ -361,7 +292,6 @@ function updateInfoPanel() {
     
     infoPanel.innerHTML = html;
     
-    // Inyección matemática con colores
     katex.render(`\\color{#198754}{\\text{sen}}\\left(${texExpr}\\right) = ${exactSenRaw}`, document.getElementById('infoSenRaw'));
     katex.render(`\\color{#dc3545}{\\text{cos}}\\left(${texExpr}\\right) = ${exactCosRaw}`, document.getElementById('infoCosRaw'));
     
