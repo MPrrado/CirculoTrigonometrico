@@ -7,6 +7,7 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -22,10 +23,23 @@
             <div id="visualizer-container" class="w-100 d-flex flex-column align-items-center mt-2">
                 <figure class="w-100 d-flex flex-column align-items-center m-0">
                     <canvas id="trigCanvas" width="400" height="400" class="border rounded shadow-sm bg-white"></canvas>
-                    
                     <figcaption id="infoPanel" class="w-100 mt-3 border rounded bg-white shadow-sm overflow-hidden"></figcaption>
                 </figure>
             </div>
+
+            <article class="card shadow-sm mt-4 w-100 border-info">
+                <header class="card-header bg-info text-dark py-2">
+                    <h6 class="mb-0 fw-bold">Pasos para reducir al 1er Cuadrante</h6>
+                </header>
+                <div class="card-body bg-white p-3 text-start small">
+                    <ol class="mb-0 ps-3">
+                        <li class="mb-2">Dibujar en el círculo trigonométrico nuestro ángulo dado, dividiendo en las partes que corresponda, ejemplo <span class="math-tex">\frac{5\pi}{6}</span>.</li>
+                        <li class="mb-2">Dibujar un ángulo agudo a ojo de referencia, menor que <span class="math-tex">45^\circ</span> o <span class="math-tex">\frac{\pi}{4}</span>.</li>
+                        <li class="mb-2">Comparar los 'tamaños' del <strong class="text-success">seno</strong> y <strong class="text-danger">coseno</strong> del ángulo original con los de referencia.</li>
+                        <li>Luego escribimos las equivalencias y por último nos fijamos si los signos de la función original son distintos a los de las funciones del ángulo de referencia, entonces agregaremos un signo menos adelante de la reducción o no.</li>
+                    </ol>
+                </div>
+            </article>
         </section>
 
         <aside class="col-lg-6">
@@ -36,12 +50,10 @@
                 <div class="card-body bg-light p-3">
                     
                     <div class="mb-3">
-                        <label for="mathInput" class="form-label text-muted small mb-1">Expresión (Usa las flechas para moverte):</label>
-                        <input type="text" id="mathInput" class="form-control form-control-lg text-end font-monospace mb-2" placeholder="ej: 5pi/6 - 3" autocomplete="off">
-                        
-                        <div class="d-flex justify-content-between align-items-center px-2">
-                            <span class="badge bg-secondary">LaTeX Preview</span>
-                            <div id="latexPreview" class="text-primary fs-5 text-end min-h-preview"></div>
+                        <label for="mathInput" class="form-label text-muted small mb-1">Expresión (teclado físico o virtual):</label>
+                        <div class="latex-screen-wrapper">
+                            <div id="latexRenderLayer" class="latex-render-layer"></div>
+                            <input type="text" id="mathInput" class="hidden-math-input" autocomplete="off">
                         </div>
                     </div>
                     
